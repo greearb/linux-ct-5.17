@@ -1270,7 +1270,7 @@ static int cfg80211_wext_siwrate(struct net_device *dev,
 		return -EINVAL;
 
 	wiphy_lock(&rdev->wiphy);
-	ret = rdev_set_bitrate_mask(rdev, dev, NULL, &mask);
+	ret = rdev_set_bitrate_mask(rdev, dev, NULL, &mask, false);
 	wiphy_unlock(&rdev->wiphy);
 
 	return ret;
