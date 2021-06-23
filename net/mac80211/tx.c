@@ -2343,7 +2343,7 @@ netdev_tx_t ieee80211_monitor_start_xmit(struct sk_buff *skb,
 		      IEEE80211_TX_CTL_INJECTED;
 
 	/* Sanity-check the length of the radiotap header */
-	if (!ieee80211_validate_radiotap_len(skb))
+	if (!ieee80211_validate_radiotap_len(skb)) {
 		pr_info("validate-radiotap-len failed.\n");
 		goto fail;
 	}
