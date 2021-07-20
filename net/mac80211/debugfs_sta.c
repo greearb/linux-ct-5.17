@@ -221,7 +221,7 @@ static ssize_t sta_stats_read(struct file *file, char __user *userbuf,
 	PRINT_MY_STATS("tx-bw-40", sta->tx_stats.msdu_40);
 	PRINT_MY_STATS("tx-bw-80", sta->tx_stats.msdu_80);
 	PRINT_MY_STATS("tx-bw-160", sta->tx_stats.msdu_160);
-	PRINT_MY_STATS("tx-bw-he-ru", sta->tx_stats.msdu_he_ru);
+	PRINT_MY_STATS("tx-bw-he", sta->tx_stats.msdu_he);
 
 	PRINT_MY_STATS("tx-vht", sta->tx_stats.msdu_vht);
 	PRINT_MY_STATS("tx-ht", sta->tx_stats.msdu_ht);

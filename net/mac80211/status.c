@@ -1213,14 +1213,18 @@ void ieee80211_tx_status_ext(struct ieee80211_hw *hw,
 				nss = (txrt->idx / 8);
 				mcs = txrt->idx - (nss * 8);
 				sta->tx_stats.msdu_ht++;
-			}
-			else if (txrt->flags & IEEE80211_TX_RC_VHT_MCS) {
+			} else if (txrt->flags & IEEE80211_TX_RC_VHT_MCS) {
 				mcs = ieee80211_rate_get_vht_mcs(txrt);
 				nss = ieee80211_rate_get_vht_nss(txrt);
 				nss -= 1;
 				sta->tx_stats.msdu_vht++;
-			}
-			else {
+			} else if (pubsta && status->rate &&
+				 (status->rate->flags & RATE_INFO_FLAGS_HE_MCS)) {
+				/* get info from status->rate */
+				mcs = status->rate->mcs;
+				nss = status->rate->nss - 1;
+				sta->tx_stats.msdu_he++;
+			} else {
 				mcs = txrt->idx;
 				sta->tx_stats.msdu_legacy++;
 			}
