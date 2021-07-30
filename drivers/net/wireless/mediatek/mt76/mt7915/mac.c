@@ -2450,6 +2450,29 @@ void mt7915_mac_update_stats(struct mt7915_phy *phy)
 	cnt = mt76_rr(dev, MT_MIB_DR8(phy->band_idx));
 	mib->tx_mu_mpdu_cnt += cnt;
 
+	cnt = mt76_rr(dev, MT_MIB_SDR38(phy->band_idx));
+	mib->tx_mgt_frame_cnt += FIELD_GET(MT_MIB_CTRL_TX_CNT, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR39(phy->band_idx));
+	mib->tx_mgt_frame_retry_cnt += FIELD_GET(MT_MIB_MGT_RETRY_CNT, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR40(phy->band_idx));
+	mib->tx_data_frame_retry_cnt += FIELD_GET(MT_MIB_DATA_RETRY_CNT, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR42(phy->band_idx));
+	mib->rx_partial_beacon_cnt += FIELD_GET(MT_MIB_RX_PARTIAL_BEACON_BSSID0, cnt);
+	mib->rx_partial_beacon_cnt += FIELD_GET(MT_MIB_RX_PARTIAL_BEACON_BSSID1, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR43(phy->band_idx));
+	mib->rx_partial_beacon_cnt += FIELD_GET(MT_MIB_RX_PARTIAL_BEACON_BSSID2, cnt);
+	mib->rx_partial_beacon_cnt += FIELD_GET(MT_MIB_RX_PARTIAL_BEACON_BSSID3, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR46(phy->band_idx));
+	mib->rx_oppo_ps_rx_dis_drop_cnt += FIELD_GET(MT_MIB_OPPO_PS_RX_DIS_DROP_COUNT, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_DR8(phy->band_idx));
+	mib->tx_mu_mpdu_cnt += cnt;
+
 	cnt = mt76_rr(dev, MT_MIB_DR9(phy->band_idx));
 	mib->tx_mu_acked_mpdu_cnt += cnt;
 
@@ -2531,6 +2554,19 @@ void mt7915_mac_update_stats(struct mt7915_phy *phy)
 			dev->mt76.aggr_stats[aggr0++] += FIELD_GET(GENMASK(31, 16), val);
 		}
 	}
+
+	cnt = mt76_rr(dev, MT_MIB_M0DROPSR00(phy->band_idx));
+	mib->tx_drop_rts_retry_fail_cnt += FIELD_GET(MT_MIB_RTS_RETRY_FAIL_DROP_MASK, cnt);
+	mib->tx_drop_mpdu_retry_fail_cnt += FIELD_GET(MT_MIB_RTS_RETRY_FAIL_DROP_MASK, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_M0DROPSR01(phy->band_idx));
+	mib->tx_drop_lto_limit_fail_cnt += FIELD_GET(MT_MIB_LTO_FAIL_DROP_MASK, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR50(phy->band_idx));
+	mib->tx_dbnss_cnt += FIELD_GET(MT_MIB_DBNSS_CNT_DROP_MASK, cnt);
+
+	cnt = mt76_rr(dev, MT_MIB_SDR51(phy->band_idx));
+	mib->rx_fcs_ok_cnt += FIELD_GET(MT_MIB_RX_FCS_OK_MASK, cnt);
 }
 
 void mt7915_mac_sta_rc_work(struct work_struct *work)
