@@ -989,6 +989,7 @@ mt7915_mac_write_txwi_tm(struct mt7915_phy *phy, struct mt76_wcid *wcid, __le32 
 	u32 val;
 	bool cck = false;
 	int band;
+	int xmit_count = 1;
 
 	msta = container_of(wcid, struct mt7915_sta, wcid);
 
@@ -1074,10 +1075,15 @@ mt7915_mac_write_txwi_tm(struct mt7915_phy *phy, struct mt76_wcid *wcid, __le32 
 	/* TODO:  Support per-skb txpower, p.15 of txpower doc, DW2 29:24. */
 	txwi[2] |= cpu_to_le32(MT_TXD2_FIX_RATE);
 
-	/* Looks like this sets tx attempt to exactly 1.
-	 * TODO:  Use td->tx_xmit_count, if in txo mode.
-	 */
-	le32p_replace_bits(&txwi[3], 1, MT_TXD3_REM_TX_COUNT);
+	if (msta->test.txo_active) {
+		xmit_count = td->tx_xmit_count;
+		if (xmit_count == 0) {
+			xmit_count = 1;
+			txwi[3] |= cpu_to_le32(MT_TXD3_NO_ACK);
+		}
+	}
+
+	le32p_replace_bits(&txwi[3], xmit_count, MT_TXD3_REM_TX_COUNT);
 	if (td->tx_rate_mode < MT76_TM_TX_MODE_HT)
 		txwi[3] |= cpu_to_le32(MT_TXD3_BA_DISABLE);
 
