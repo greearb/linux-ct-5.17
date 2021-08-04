@@ -1388,9 +1388,23 @@ void mt7915_mac_write_txwi(struct mt7915_dev *dev, __le32 *txwi,
 #ifdef CONFIG_NL80211_TESTMODE
 	{
 		struct mt7915_sta *msta;
+		struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
+		__le16 fc;
+
+		if (!is_8023)
+			fc = hdr->frame_control;
 
 		msta = container_of(wcid, struct mt7915_sta, wcid);
-		if (mt76_testmode_enabled(mphy) || msta->test.txo_active)
+		if (mt76_testmode_enabled(mphy) ||
+		    (msta->test.txo_active &&
+		     /* Only do txo overrides for (larger) data frames, this
+		      * generally allows connection mgt frames to pass but still
+		      * lets us force the data packets we care about.
+		      */
+		     (skb->len >= 400) &&
+		     (is_8023 ||
+		      ((ieee80211_is_data_qos(fc) || ieee80211_is_data(fc)) &&
+		       (!(ieee80211_is_qos_nullfunc(fc) || ieee80211_is_nullfunc(fc)))))))
 			mt7915_mac_write_txwi_tm(mphy->priv, wcid, txwi, skb);
 	}
 #endif
