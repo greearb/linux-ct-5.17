@@ -1072,10 +1072,14 @@ mt7915_mac_write_txwi_tm(struct mt7915_phy *phy, struct mt76_wcid *wcid, __le32 
 		   FIELD_PREP(MT_TX_RATE_MODE, mode) |
 		   FIELD_PREP(MT_TX_RATE_NSS, nss - 1);
 
-	/* TODO:  Support per-skb txpower, p.15 of txpower doc, DW2 29:24. */
 	txwi[2] |= cpu_to_le32(MT_TXD2_FIX_RATE);
 
 	if (msta->test.txo_active) {
+		s8 txp = td->tx_power[0] - 16;
+
+		/* Support per-skb txpower, p.15 of tx doc, DW2 29:24. */
+		le32p_replace_bits(&txwi[2], txp, MT_TXD2_POWER_OFFSET);
+
 		xmit_count = td->tx_xmit_count;
 		if (xmit_count == 0) {
 			xmit_count = 1;
