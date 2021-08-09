@@ -1186,6 +1186,9 @@ mt7915_mcu_sta_bfer_vht(struct ieee80211_sta *sta, struct mt7915_phy *phy,
 		if (sta->bandwidth == IEEE80211_STA_RX_BW_160)
 			bf->ibf_nrow = 1;
 	}
+
+	pr_info("sta-bfer-vht, sta->bw: %d  bf->nrow: %d  bf->ncol: %d  explicit: %d",
+		sta->bandwidth, bf->nrow, bf->ncol, explicit);
 }
 
 static void
@@ -1217,6 +1220,9 @@ mt7915_mcu_sta_bfer_he(struct ieee80211_sta *sta, struct ieee80211_vif *vif,
 	bf->ncol = min_t(u8, nss_mcs, bf->nrow);
 	bf->ibf_ncol = bf->ncol;
 
+	pr_info("mcu-sta-bfer-he, sta->bw: %d  bf->nrow: %d  bf->ncol: %d trigger-su: %d  trigger-mu: %d\n",
+		sta->bandwidth, bf->nrow, bf->ncol, bf->trigger_su, bf->trigger_mu);
+
 	if (sta->bandwidth != IEEE80211_STA_RX_BW_160)
 		return;
 
@@ -1246,6 +1252,8 @@ mt7915_mcu_sta_bfer_he(struct ieee80211_sta *sta, struct ieee80211_vif *vif,
 		     pe->phy_cap_info[4]);
 
 	bf->nrow_bw160 = min_t(int, snd_dim, sts);
+
+	pr_info("nr_bw160: %d  nc_bw160: %d", bf->nrow_bw160, bf->ncol_bw160);
 }
 
 static void
