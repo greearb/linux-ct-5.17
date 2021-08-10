@@ -2583,4 +2583,8 @@ u32 ieee80211_calc_expected_tx_airtime(struct ieee80211_hw *hw,
 void ieee80211_init_frag_cache(struct ieee80211_fragment_cache *cache);
 void ieee80211_destroy_frag_cache(struct ieee80211_fragment_cache *cache);
 
+void ieee80211_adjust_he_cap(struct ieee80211_sta_he_cap* my_cap,
+			     const struct ieee80211_sta_he_cap* he_cap,
+			     struct ieee80211_sub_if_data *sdata);
+
 #endif /* IEEE80211_I_H */
