@@ -945,8 +945,16 @@ mt7915_mcu_sta_muru_tlv(struct sk_buff *skb, struct ieee80211_sta *sta,
 	muru->cfg.mimo_dl_en = mvif->cap.he_mu_ebfer ||
 			       mvif->cap.vht_mu_ebfer ||
 			       mvif->cap.vht_mu_ebfee;
-	muru->cfg.mimo_ul_en = true;
-	muru->cfg.ofdma_dl_en = true;
+
+	/* The muru enable/disable are only set after the first station connection.
+	 * Without this patch, the firmware couldn't enable muru
+	 * if the first connected station is non-HE type.  So enable it unless
+	 * the user has specifically disabled ofdma.
+	 */
+	if (!vif->bss_conf.he_ofdma_disable) {
+		muru->cfg.mimo_ul_en = true;
+		muru->cfg.ofdma_dl_en = true;
+	}
 
 	if (sta->vht_cap.vht_supported)
 		muru->mimo_dl.vht_mu_bfee =
@@ -955,29 +963,38 @@ mt7915_mcu_sta_muru_tlv(struct sk_buff *skb, struct ieee80211_sta *sta,
 	if (!sta->he_cap.has_he)
 		return;
 
-	muru->mimo_dl.partial_bw_dl_mimo =
+	if (vif->bss_conf.he_ofdma_disable ||
+	    (sta->mgd_flags & IEEE80211_STA_DISABLE_OFDMA)) {
+		pr_info("STA: %pM  sta-muru-tlv, NOT enabling OFDMA", sta->addr);
+	} else {
+		pr_info("STA: %pM  sta-muru-tlv, enabling OFDMA", sta->addr);
+
+		//muru->cfg.ofdma_ul_en = true;
+
+		muru->mimo_dl.partial_bw_dl_mimo =
 		HE_PHY(CAP6_PARTIAL_BANDWIDTH_DL_MUMIMO, elem->phy_cap_info[6]);
 
-	muru->mimo_ul.full_ul_mimo =
-		HE_PHY(CAP2_UL_MU_FULL_MU_MIMO, elem->phy_cap_info[2]);
-	muru->mimo_ul.partial_ul_mimo =
-		HE_PHY(CAP2_UL_MU_PARTIAL_MU_MIMO, elem->phy_cap_info[2]);
+		muru->mimo_ul.full_ul_mimo =
+			HE_PHY(CAP2_UL_MU_FULL_MU_MIMO, elem->phy_cap_info[2]);
+		muru->mimo_ul.partial_ul_mimo =
+			HE_PHY(CAP2_UL_MU_PARTIAL_MU_MIMO, elem->phy_cap_info[2]);
 
-	muru->ofdma_dl.punc_pream_rx =
-		HE_PHY(CAP1_PREAMBLE_PUNC_RX_MASK, elem->phy_cap_info[1]);
-	muru->ofdma_dl.he_20m_in_40m_2g =
-		HE_PHY(CAP8_20MHZ_IN_40MHZ_HE_PPDU_IN_2G, elem->phy_cap_info[8]);
-	muru->ofdma_dl.he_20m_in_160m =
-		HE_PHY(CAP8_20MHZ_IN_160MHZ_HE_PPDU, elem->phy_cap_info[8]);
-	muru->ofdma_dl.he_80m_in_160m =
-		HE_PHY(CAP8_80MHZ_IN_160MHZ_HE_PPDU, elem->phy_cap_info[8]);
+		muru->ofdma_dl.punc_pream_rx =
+			HE_PHY(CAP1_PREAMBLE_PUNC_RX_MASK, elem->phy_cap_info[1]);
+		muru->ofdma_dl.he_20m_in_40m_2g =
+			HE_PHY(CAP8_20MHZ_IN_40MHZ_HE_PPDU_IN_2G, elem->phy_cap_info[8]);
+		muru->ofdma_dl.he_20m_in_160m =
+			HE_PHY(CAP8_20MHZ_IN_160MHZ_HE_PPDU, elem->phy_cap_info[8]);
+		muru->ofdma_dl.he_80m_in_160m =
+			HE_PHY(CAP8_80MHZ_IN_160MHZ_HE_PPDU, elem->phy_cap_info[8]);
 
-	muru->ofdma_ul.t_frame_dur =
-		HE_MAC(CAP1_TF_MAC_PAD_DUR_MASK, elem->mac_cap_info[1]);
-	muru->ofdma_ul.mu_cascading =
-		HE_MAC(CAP2_MU_CASCADING, elem->mac_cap_info[2]);
-	muru->ofdma_ul.uo_ra =
-		HE_MAC(CAP3_OFDMA_RA, elem->mac_cap_info[3]);
+		muru->ofdma_ul.t_frame_dur =
+			HE_MAC(CAP1_TF_MAC_PAD_DUR_MASK, elem->mac_cap_info[1]);
+		muru->ofdma_ul.mu_cascading =
+			HE_MAC(CAP2_MU_CASCADING, elem->mac_cap_info[2]);
+		muru->ofdma_ul.uo_ra =
+			HE_MAC(CAP3_OFDMA_RA, elem->mac_cap_info[3]);
+	}
 }
 
 static void
