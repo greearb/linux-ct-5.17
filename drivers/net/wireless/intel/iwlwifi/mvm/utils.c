@@ -157,7 +157,7 @@ int iwl_mvm_set_valid_ant(struct iwl_mvm *mvm, u32 tx_ant, u32 rx_ant)
 		mvm->nvm_data->valid_tx_ant = (tx_ant & ANT_ABC);
 
 		iwl_reinit_capab(mvm->trans, mvm->nvm_data, mvm->nvm_data->valid_tx_ant,
-				 mvm->nvm_data->valid_rx_ant);
+				 mvm->nvm_data->valid_rx_ant, mvm->fw);
 
 		return 0;
 	}

@@ -795,7 +795,7 @@ iwl_nvm_fixup_sband_iftd(struct iwl_trans *trans,
 			cpu_to_le16(IEEE80211_HE_MCS_NOT_SUPPORTED << 2);
 		iftype_data->he_cap.he_mcs_nss_supp.rx_mcs_160 |=
 			cpu_to_le16(IEEE80211_HE_MCS_NOT_SUPPORTED << 2);
-		iftype_datap->he_cap.he_mcs_nss_supp.tx_mcs_160 |=
+		iftype_data->he_cap.he_mcs_nss_supp.tx_mcs_160 |=
 			cpu_to_le16(IEEE80211_HE_MCS_NOT_SUPPORTED << 2);
 		iftype_data->he_cap.he_mcs_nss_supp.rx_mcs_80p80 |=
 			cpu_to_le16(IEEE80211_HE_MCS_NOT_SUPPORTED << 2);
@@ -865,7 +865,7 @@ static void iwl_init_he_hw_capab(struct iwl_trans *trans,
 /* This is a subsection of the logic in iwl_init_bands */
 void iwl_reinit_capab(struct iwl_trans *trans,
 		      struct iwl_nvm_data *data,
-		      u8 tx_chains, u8 rx_chains) {
+		      u8 tx_chains, u8 rx_chains, const struct iwl_fw *fw) {
 	struct ieee80211_supported_band *sband;
 
 	sband = &data->bands[NL80211_BAND_2GHZ];
@@ -873,7 +873,7 @@ void iwl_reinit_capab(struct iwl_trans *trans,
 			     tx_chains, rx_chains);
 
 	if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
-		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains);
+		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains, fw);
 	}
 	else {
 		sband->iftype_data = NULL;
@@ -889,7 +889,7 @@ void iwl_reinit_capab(struct iwl_trans *trans,
 		sband->vht_cap.vht_supported = false;
 
 	if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
-		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains);
+		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains, fw);
 	}
 	else {
 		sband->iftype_data = NULL;
@@ -898,7 +898,7 @@ void iwl_reinit_capab(struct iwl_trans *trans,
 	sband = &data->bands[NL80211_BAND_6GHZ];
 
 	if (data->sku_cap_11ax_enable && !iwlwifi_mod_params.disable_11ax) {
-		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains);
+		iwl_init_he_hw_capab(trans, data, sband, tx_chains, rx_chains, fw);
 	}
 	else {
 		sband->iftype_data = NULL;
