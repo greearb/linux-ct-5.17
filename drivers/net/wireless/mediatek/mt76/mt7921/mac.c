@@ -498,8 +498,12 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 	__le16 fc = 0;
 	u32 mode = 0;
 	int i, idx;
+	struct mt76_sta_stats *stats = NULL;
+	struct mib_stats *mib = &phy->mib;
 
 	memset(status, 0, sizeof(*status));
+
+	mib->rx_d_skb++;
 
 	if (rxd1 & MT_RXD1_NORMAL_BAND_IDX)
 		return -EINVAL;
@@ -507,8 +511,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 	if (!test_bit(MT76_STATE_RUNNING, &mphy->state))
 		return -EINVAL;
 
-	if (rxd2 & MT_RXD2_NORMAL_AMSDU_ERR)
+	if (rxd2 & MT_RXD2_NORMAL_AMSDU_ERR) {
+		mib->rx_d_rxd2_amsdu_err++;
 		return -EINVAL;
+	}
 
 	hdr_trans = rxd2 & MT_RXD2_NORMAL_HDR_TRANS;
 	if (hdr_trans && (rxd1 & MT_RXD1_NORMAL_CM))
@@ -527,6 +533,7 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 		struct mt7921_sta *msta;
 
 		msta = container_of(status->wcid, struct mt7921_sta, wcid);
+		stats = &msta->stats;
 		spin_lock_bh(&dev->sta_poll_lock);
 		if (list_empty(&msta->poll_list))
 			list_add_tail(&msta->poll_list, &dev->sta_poll_list);
@@ -547,8 +554,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 		break;
 	}
 
-	if (!sband->channels)
+	if (!sband->channels) {
+		mib->rx_d_null_channels++;
 		return -EINVAL;
+	}
 
 	if ((rxd0 & csum_mask) == csum_mask)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
@@ -568,8 +577,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 
 	remove_pad = FIELD_GET(MT_RXD2_NORMAL_HDR_OFFSET, rxd2);
 
-	if (rxd2 & MT_RXD2_NORMAL_MAX_LEN_ERROR)
+	if (rxd2 & MT_RXD2_NORMAL_MAX_LEN_ERROR) {
+		mib->rx_d_max_len_err++;
 		return -EINVAL;
+	}
 
 	rxd += 6;
 	if (rxd1 & MT_RXD1_NORMAL_GROUP_4) {
@@ -581,8 +592,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 		qos_ctl = FIELD_GET(MT_RXD8_QOS_CTL, v2);
 
 		rxd += 4;
-		if ((u8 *)rxd - skb->data >= skb->len)
+		if ((u8 *)rxd - skb->data >= skb->len) {
+			mib->rx_d_too_short++;
 			return -EINVAL;
+		}
 	}
 
 	if (rxd1 & MT_RXD1_NORMAL_GROUP_1) {
@@ -612,8 +625,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 			}
 		}
 		rxd += 4;
-		if ((u8 *)rxd - skb->data >= skb->len)
+		if ((u8 *)rxd - skb->data >= skb->len) {
+			mib->rx_d_too_short++;
 			return -EINVAL;
+		}
 	}
 
 	if (rxd1 & MT_RXD1_NORMAL_GROUP_2) {
@@ -634,8 +649,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 		}
 
 		rxd += 2;
-		if ((u8 *)rxd - skb->data >= skb->len)
+		if ((u8 *)rxd - skb->data >= skb->len) {
+			mib->rx_d_too_short++;
 			return -EINVAL;
+		}
 	}
 
 	/* RXD Group 3 - P-RXV */
@@ -646,8 +663,10 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 
 		rxv = rxd;
 		rxd += 2;
-		if ((u8 *)rxd - skb->data >= skb->len)
+		if ((u8 *)rxd - skb->data >= skb->len) {
+			mib->rx_d_too_short++;
 			return -EINVAL;
+		}
 
 		v0 = le32_to_cpu(rxv[0]);
 		v1 = le32_to_cpu(rxv[1]);
@@ -707,6 +726,7 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 			status->he_dcm = !!(idx & MT_PRXV_TX_DCM);
 			break;
 		default:
+			mib->rx_d_bad_mode++;
 			return -EINVAL;
 		}
 
@@ -714,6 +734,8 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 
 		switch (FIELD_GET(MT_PRXV_FRAME_MODE, v0)) {
 		case IEEE80211_STA_RX_BW_20:
+			if (stats)
+				stats->rx_bw_20++;
 			break;
 		case IEEE80211_STA_RX_BW_40:
 			if (mode & MT_PHY_TYPE_HE_EXT_SU &&
@@ -721,17 +743,28 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 				status->bw = RATE_INFO_BW_HE_RU;
 				status->he_ru =
 					NL80211_RATE_INFO_HE_RU_ALLOC_106;
+				if (stats) {
+					stats->rx_bw_he_ru++;
+					stats->rx_ru_106++;
+				}
 			} else {
 				status->bw = RATE_INFO_BW_40;
+				if (stats)
+					stats->rx_bw_40++;
 			}
 			break;
 		case IEEE80211_STA_RX_BW_80:
 			status->bw = RATE_INFO_BW_80;
+			if (stats)
+				stats->rx_bw_80++;
 			break;
 		case IEEE80211_STA_RX_BW_160:
 			status->bw = RATE_INFO_BW_160;
+			if (stats)
+				stats->rx_bw_160++;
 			break;
 		default:
+			mib->rx_d_bad_bw++;
 			return -EINVAL;
 		}
 
@@ -755,6 +788,15 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 		} else {
 			WARN_ON_ONCE(1); /* this driver is for only 2x2 AFAIK */
 			status->chains = BIT(0);
+		}
+
+		if (stats) {
+			if (unlikely(status->nss > 3))
+				stats->rx_nss[3]++;
+			else
+				stats->rx_nss[status->nss - 1]++;
+
+			stats->rx_mode[mode]++;
 		}
 	}
 
@@ -802,6 +844,9 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 
 	if (rxv && mode >= MT_PHY_TYPE_HE_SU && !(status->flag & RX_FLAG_8023))
 		mt7921_mac_decode_he_radiotap(skb, rxv, mode);
+
+	mib->rx_pkts_nic++;
+	mib->rx_bytes_nic += skb->len;
 
 	if (!status->wcid || !ieee80211_is_data_qos(fc))
 		return 0;
