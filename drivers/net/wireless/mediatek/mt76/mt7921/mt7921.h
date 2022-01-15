@@ -102,6 +102,7 @@ struct mt7921_sta {
 	struct mt76_sta_stats stats;
 
 	struct mt76_connac_sta_key_conf bip;
+	struct mt76_testmode_data test;
 };
 
 DECLARE_EWMA(rssi, 10, 8);
