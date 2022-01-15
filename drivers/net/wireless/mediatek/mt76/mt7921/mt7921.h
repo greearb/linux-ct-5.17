@@ -219,6 +219,12 @@ struct mt7921_dev {
 	bool hw_init_done:1;
 	bool fw_assert:1;
 
+	/* Should we request TXS for MT_PACKET_ID_NO_SKB?  Doing so gives better
+	 * costs but causes a great deal more TXS packet processing by driver and
+	 * creation by firmware, so may be a performance drag.
+	 */
+	bool txs_for_no_skb_enabled;
+
 	struct list_head sta_poll_list;
 	spinlock_t sta_poll_lock;
 

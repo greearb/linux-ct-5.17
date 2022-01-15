@@ -642,6 +642,29 @@ static const struct file_operations fops_set_rate_override = {
 	.llseek = default_llseek,
 };
 
+static int
+mt7921_txs_for_no_skb_set(void *data, u64 val)
+{
+	struct mt7921_dev *dev = data;
+
+	dev->txs_for_no_skb_enabled = !!val;
+
+	return 0;
+}
+
+static int
+mt7921_txs_for_no_skb_get(void *data, u64 *val)
+{
+	struct mt7921_dev *dev = data;
+
+	*val = dev->txs_for_no_skb_enabled;
+
+	return 0;
+}
+
+DEFINE_DEBUGFS_ATTRIBUTE(fops_txs_for_no_skb, mt7921_txs_for_no_skb_get,
+			 mt7921_txs_for_no_skb_set, "%lld\n");
+
 int mt7921_init_debugfs(struct mt7921_dev *dev)
 {
 	struct dentry *dir;
@@ -670,5 +693,6 @@ int mt7921_init_debugfs(struct mt7921_dev *dev)
 					    mt7921s_sched_quota_read);
 	debugfs_create_file("set_rate_override", 0600, dir,
 			    dev, &fops_set_rate_override);
+	debugfs_create_file("force_txs", 0600, dir, dev, &fops_txs_for_no_skb);
 	return 0;
 }
