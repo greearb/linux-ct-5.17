@@ -227,6 +227,11 @@ struct mt7921_dev {
 	 */
 	bool txs_for_no_skb_enabled;
 
+	/* Should we request TXS for all skbs (and properly map to skb)
+	 * Very likely this reduces performance.
+	 */
+	bool txs_for_all_enabled;
+
 	struct list_head sta_poll_list;
 	spinlock_t sta_poll_lock;
 
