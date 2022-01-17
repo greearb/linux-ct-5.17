@@ -709,6 +709,12 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 				status->nss = 2;
 			else
 				status->nss = 1;
+			if (stats) {
+				if (unlikely(i > 11))
+					stats->rx_rate_idx[11]++;
+				else
+					stats->rx_rate_idx[i]++;
+			}
 			break;
 		case MT_PHY_TYPE_HT_GF:
 		case MT_PHY_TYPE_HT:
@@ -716,13 +722,21 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 			status->nss = i / 8 + 1;
 			if (i > 31)
 				return -EINVAL;
+			if (stats) {
+				int rix = i % 8;
+				stats->rx_rate_idx[rix]++;
+			}
 			break;
 		case MT_PHY_TYPE_VHT:
 			status->nss =
 				FIELD_GET(MT_PRXV_NSTS, v0) + 1;
 			status->encoding = RX_ENC_VHT;
-			if (i > 11)
-				return -EINVAL;
+			if (stats) {
+				if (unlikely(i > 11))
+					stats->rx_rate_idx[11]++;
+				else
+					stats->rx_rate_idx[i]++;
+			}
 			break;
 		case MT_PHY_TYPE_HE_MU:
 		case MT_PHY_TYPE_HE_SU:
@@ -737,6 +751,12 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 				status->he_gi = gi;
 
 			status->he_dcm = !!(idx & MT_PRXV_TX_DCM);
+			if (stats) {
+				if (unlikely(i > 11))
+					stats->rx_rate_idx[11]++;
+				else
+					stats->rx_rate_idx[i]++;
+			}
 			break;
 		default:
 			mib->rx_d_bad_mode++;
