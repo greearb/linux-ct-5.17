@@ -1880,6 +1880,10 @@ mt7915_mac_add_txs_skb(struct mt7915_dev *dev, struct mt76_wcid *wcid, int pid,
 	}
 
 	stats->tx_mode[mode]++;
+	if (unlikely(rate.nss > 4 || rate.nss == 0))
+		stats->tx_nss[3]++;
+	else
+		stats->tx_nss[rate.nss - 1]++;
 
 	switch (FIELD_GET(MT_TXS0_BW, txs)) {
 	case IEEE80211_STA_RX_BW_160:
