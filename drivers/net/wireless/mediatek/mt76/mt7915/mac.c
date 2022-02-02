@@ -1610,7 +1610,7 @@ mt7915_txwi_free(struct mt7915_dev *dev, struct mt76_txwi_cache *t,
 	/* Cannot clear all of info->status, we need the driver private
 	 * status intact.
 	 */
-	info->status.is_valid_ack_signal = 0;
+	info->status.flags &= ~(IEEE80211_TX_STATUS_ACK_SIGNAL_VALID);
 
 	rate = &info->status.rates[0];
 	rate->idx = -1; /* will over-write below if we found wcid */
