@@ -135,6 +135,7 @@ static const u32 mt7915_offs[] = {
 	[AC_OFFSET]		= 0x040,
 	[M0DROPSR00]            = 0x190,
 	[M0DROPSR01]            = 0x194,
+	[ETBF_PAR_RPT0]		= 0x068,
 };
 
 static const u32 mt7916_offs[] = {
@@ -207,6 +208,7 @@ static const u32 mt7916_offs[] = {
 	[PLE_PG_HIF_GROUP]	= 0x00c,
 	[PLE_HIF_PG_INFO]	= 0x388,
 	[AC_OFFSET]		= 0x080,
+	[ETBF_PAR_RPT0]		= 0x100,
 };
 
 static const struct __map mt7915_reg_map[] = {
