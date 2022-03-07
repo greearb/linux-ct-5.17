@@ -1701,6 +1701,7 @@ struct ieee80211_ht_operation {
 #define IEEE80211_MIN_AMPDU_BUF		0x8
 #define IEEE80211_MAX_AMPDU_BUF_HT	0x40
 #define IEEE80211_MAX_AMPDU_BUF		0x100
+#define IEEE80211_MAX_AMPDU_BUF_HE	0x100
 
 
 /* Spatial Multiplexing Power Save Modes (for capability) */
