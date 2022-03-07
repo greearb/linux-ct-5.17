@@ -485,10 +485,10 @@ static int
 mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 			struct mt76_rx_status *status,
 			struct ieee80211_supported_band *sband,
-			__le32 *rxv)
+			__le32 *rxv, u8* nss)
 {
 	u32 v0, v2;
-	u8 stbc, gi, bw, dcm, mode, nss;
+	u8 stbc, gi, bw, dcm, mode;
 	int i, idx;
 	bool cck = false;
 
@@ -496,7 +496,7 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 	v2 = le32_to_cpu(rxv[2]);
 
 	idx = i = FIELD_GET(MT_PRXV_TX_RATE, v0);
-	nss = FIELD_GET(MT_PRXV_NSTS, v0) + 1;
+	*nss = FIELD_GET(MT_PRXV_NSTS, v0) + 1;
 
 	if (!is_mt7915(&dev->mt76)) {
 		stbc = FIELD_GET(MT_PRXV_HT_STBC, v0);
@@ -528,7 +528,6 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 			return -EINVAL;
 		break;
 	case MT_PHY_TYPE_VHT:
-		status->nss = nss;
 		status->encoding = RX_ENC_VHT;
 		if (gi)
 			status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
@@ -539,7 +538,6 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 	case MT_PHY_TYPE_HE_SU:
 	case MT_PHY_TYPE_HE_EXT_SU:
 	case MT_PHY_TYPE_HE_TB:
-		status->nss = nss;
 		status->encoding = RX_ENC_HE;
 		i &= GENMASK(3, 0);
 
@@ -579,6 +577,12 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 	status->enc_flags |= RX_ENC_FLAG_STBC_MASK * stbc;
 	if (mode < MT_PHY_TYPE_HE_SU && gi)
 		status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
+
+	status->nss = *nss;
+	if (stbc) {
+		*nss *= 2;
+		WARN_ON_ONCE(*nss > 4);
+	}
 
 	return 0;
 }
@@ -752,6 +756,8 @@ mt7915_mac_fill_rx(struct mt7915_dev *dev, struct sk_buff *skb)
 	if (rxd1 & MT_RXD1_NORMAL_GROUP_3) {
 		u32 v0, v1;
 		int ret;
+		int i;
+		u8 nss;
 
 		rxv = rxd; /* DW16 assuming group 1,2,3,4 */
 		rxd += 2;
@@ -768,11 +774,11 @@ mt7915_mac_fill_rx(struct mt7915_dev *dev, struct sk_buff *skb)
 		/* TODO:  When group-5 is enabled, use nss (and stbc) to
 		 * calculate chains properly for this particular skb.
 		 */
-		status->chains = mphy->antenna_mask;
 		status->chain_signal[0] = to_rssi(MT_PRXV_RCPI0, v1);
 		status->chain_signal[1] = to_rssi(MT_PRXV_RCPI1, v1);
 		status->chain_signal[2] = to_rssi(MT_PRXV_RCPI2, v1);
 		status->chain_signal[3] = to_rssi(MT_PRXV_RCPI3, v1);
+		nss = hweight8(mphy->antenna_mask);
 
 		/* RXD Group 5 - C-RXV */
 		if (rxd1 & MT_RXD1_NORMAL_GROUP_5) {
@@ -782,10 +788,17 @@ mt7915_mac_fill_rx(struct mt7915_dev *dev, struct sk_buff *skb)
 		}
 
 		if (!is_mt7915(&dev->mt76) || (rxd1 & MT_RXD1_NORMAL_GROUP_5)) {
-			ret = mt7915_mac_fill_rx_rate(dev, status, sband, rxv);
+			ret = mt7915_mac_fill_rx_rate(dev, status, sband, rxv, &nss);
 			if (ret < 0)
 				return ret;
+		} else {
+			status->nss = nss;
 		}
+
+		/* TODO:  Test with different NSS, and maybe set chains based on
+		 * nss and chain_signal above. --Ben */
+		for (i = 0; i < nss; i++)
+			status->chains |= BIT(i);
 	}
 
 	amsdu_info = FIELD_GET(MT_RXD4_NORMAL_PAYLOAD_FORMAT, rxd4);
