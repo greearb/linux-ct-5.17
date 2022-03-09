@@ -270,7 +270,7 @@ bool cfg80211_chandef_valid(const struct cfg80211_chan_def *chandef)
 	case NL80211_CHAN_WIDTH_80P80:
 		if (!chandef->center_freq2)
 			return false;
-		}
+
 		/* adjacent is not allowed -- that's a 160 MHz channel */
 		if (chandef->center_freq1 - chandef->center_freq2 == 80 ||
 		    chandef->center_freq2 - chandef->center_freq1 == 80) {
@@ -282,7 +282,6 @@ bool cfg80211_chandef_valid(const struct cfg80211_chan_def *chandef)
 	default:
 		if (chandef->center_freq2)
 			return false;
-		}
 		break;
 	}
 
@@ -1088,7 +1087,6 @@ bool cfg80211_chandef_usable(struct wiphy *wiphy,
 		    !(ext_nss_cap &&
 		      (vht_cap->cap & IEEE80211_VHT_CAP_EXT_NSS_BW_MASK)))
 			return false;
-		}
 		break;
 	default:
 		WARN_ON_ONCE(1);
