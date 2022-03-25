@@ -733,11 +733,11 @@ mt7921_mac_fill_rx(struct mt7921_dev *dev, struct sk_buff *skb)
 			status->nss =
 				FIELD_GET(MT_PRXV_NSTS, v0) + 1;
 			status->encoding = RX_ENC_VHT;
+			if (unlikely(i > 11)) {
+				i = 11;
+			}
 			if (stats) {
-				if (unlikely(i > 11))
-					stats->rx_rate_idx[11]++;
-				else
-					stats->rx_rate_idx[i]++;
+				stats->rx_rate_idx[i]++;
 			}
 			break;
 		case MT_PHY_TYPE_HE_MU:
