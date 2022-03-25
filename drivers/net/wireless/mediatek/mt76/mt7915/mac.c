@@ -546,7 +546,7 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 		status->encoding = RX_ENC_VHT;
 		if (gi)
 			status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
-		if (i > 9) {
+		if (i > 11) {
 			mib->rx_d_bad_vht_rix++;
 			return -EINVAL;
 		}
