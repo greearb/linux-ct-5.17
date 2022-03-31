@@ -618,11 +618,16 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 	if (mode < MT_PHY_TYPE_HE_SU && gi)
 		status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
 
-	status->nss = *nss;
+	/* in case stbc is set, the nss value returned by hardware is already
+	 * correct (ie, 2 instead of 1 for 1 spatial stream).  But, at least in cases
+	 * where we are configured for a single antenna, then the second chain RSSI is '17',
+	 * which I take to mean 'not set'.  To keep from adding this to the average rssi up in
+	 * mac80211 rx logic, decrease nss here.
+	 */
 	if (stbc) {
-		*nss *= 2;
-		WARN_ON_ONCE(*nss > 4);
+		*nss >>= 1;
 	}
+	status->nss = *nss;
 
 	if (stats) {
 		if (*nss > 3)
