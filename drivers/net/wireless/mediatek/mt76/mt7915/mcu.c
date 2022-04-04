@@ -487,7 +487,13 @@ mt7915_mcu_rx_ext_event(struct mt7915_dev *dev, struct sk_buff *skb)
 	case MCU_EXT_EVENT_BCC_NOTIFY:
 		mt7915_mcu_rx_bcc_notify(dev, skb);
 		break;
+	case MCU_EXT_EVENT_IGMP_FLOODING:
+	case MCU_EXT_EVENT_PS_SYNC:
+		/* ignore some we know we do not care about */
+		break;
 	default:
+		/* in SDK, grep for EventExtEventHandler */
+		dev_info(dev->mt76.dev, "mt7915, unhandled rx_ext_event: 0x%x", rxd->ext_eid);
 		break;
 	}
 }
@@ -502,6 +508,7 @@ mt7915_mcu_rx_unsolicited_event(struct mt7915_dev *dev, struct sk_buff *skb)
 		mt7915_mcu_rx_ext_event(dev, skb);
 		break;
 	default:
+		dev_info(dev->mt76.dev, "mt7915, unhandled unsolicited event: 0x%x", rxd->eid);
 		break;
 	}
 	dev_kfree_skb(skb);
@@ -2090,7 +2097,7 @@ static int mt7915_load_patch(struct mt7915_dev *dev)
 	case PATCH_NOT_DL_SEM_SUCCESS:
 		break;
 	default:
-		dev_err(dev->mt76.dev, "Failed to get patch semaphore\n");
+		dev_err(dev->mt76.dev, "Failed to get patch semaphore: %d", sem);
 		return -EAGAIN;
 	}
 
@@ -2530,8 +2537,11 @@ int mt7915_mcu_init(struct mt7915_dev *dev)
 	}
 
 	ret = mt7915_load_firmware(dev);
-	if (ret)
+	if (ret) {
+		dev_info(dev->mt76.dev, "mcu-init: Failed to load firmware, err: %d",
+			 ret);
 		return ret;
+	}
 
 	set_bit(MT76_STATE_MCU_RUNNING, &dev->mphy.state);
 
