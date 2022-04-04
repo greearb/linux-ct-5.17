@@ -322,7 +322,7 @@ mt7915_mac_decode_he_mu_radiotap(struct sk_buff *skb, __le32 *rxv)
 }
 
 static void
-mt7915_mac_decode_he_radiotap(struct sk_buff *skb, __le32 *rxv, u32 mode)
+mt7915_mac_decode_he_radiotap(struct sk_buff *skb, __le32 *rxv, u8 mode)
 {
 	struct mt76_rx_status *status = (struct mt76_rx_status *)skb->cb;
 	static const struct ieee80211_radiotap_he known = {
@@ -488,10 +488,10 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 			struct mt76_rx_status *status,
 			struct ieee80211_supported_band *sband,
 			__le32 *rxv, u8* nss,  struct mib_stats *mib,
-			struct mt76_sta_stats *stats)
+			struct mt76_sta_stats *stats, u8* mode)
 {
 	u32 v0, v2;
-	u8 stbc, gi, bw, dcm, mode;
+	u8 stbc, gi, bw, dcm;
 	int i, idx;
 	bool cck = false;
 
@@ -504,18 +504,18 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 	if (!is_mt7915(&dev->mt76)) {
 		stbc = FIELD_GET(MT_PRXV_HT_STBC, v0);
 		gi = FIELD_GET(MT_PRXV_HT_SHORT_GI, v0);
-		mode = FIELD_GET(MT_PRXV_TX_MODE, v0);
+		*mode = FIELD_GET(MT_PRXV_TX_MODE, v0);
 		dcm = FIELD_GET(MT_PRXV_DCM, v0);
 		bw = FIELD_GET(MT_PRXV_FRAME_MODE, v0);
 	} else {
 		stbc = FIELD_GET(MT_CRXV_HT_STBC, v2);
 		gi = FIELD_GET(MT_CRXV_HT_SHORT_GI, v2);
-		mode = FIELD_GET(MT_CRXV_TX_MODE, v2);
+		*mode = FIELD_GET(MT_CRXV_TX_MODE, v2);
 		dcm = !!(idx & GENMASK(3, 0) & MT_PRXV_TX_DCM);
 		bw = FIELD_GET(MT_CRXV_FRAME_MODE, v2);
 	}
 
-	switch (mode) {
+	switch (*mode) {
 	case MT_PHY_TYPE_CCK:
 		cck = true;
 		fallthrough;
@@ -583,7 +583,7 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 			stats->rx_bw_20++;
 		break;
 	case IEEE80211_STA_RX_BW_40:
-		if (mode & MT_PHY_TYPE_HE_EXT_SU &&
+		if (*mode & MT_PHY_TYPE_HE_EXT_SU &&
 		    (idx & MT_PRXV_TX_ER_SU_106T)) {
 			status->bw = RATE_INFO_BW_HE_RU;
 			status->he_ru =
@@ -615,7 +615,7 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 	}
 
 	status->enc_flags |= RX_ENC_FLAG_STBC_MASK * stbc;
-	if (mode < MT_PHY_TYPE_HE_SU && gi)
+	if (*mode < MT_PHY_TYPE_HE_SU && gi)
 		status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
 
 	/* in case stbc is set, the nss value returned by hardware is already
@@ -634,7 +634,7 @@ mt7915_mac_fill_rx_rate(struct mt7915_dev *dev,
 			stats->rx_nss[3]++;
 		else
 			stats->rx_nss[*nss - 1]++;
-		stats->rx_mode[mode]++;
+		stats->rx_mode[*mode]++;
 	}
 
 	return 0;
@@ -649,7 +649,6 @@ mt7915_mac_fill_rx(struct mt7915_dev *dev, struct sk_buff *skb)
 	struct ieee80211_supported_band *sband;
 	__le32 *rxd = (__le32 *)skb->data;
 	__le32 *rxv = NULL;
-	u32 mode = 0;
 	/* table "PP -> HOST / X-CPU"  RX Format */
 	u32 rxd0 = le32_to_cpu(rxd[0]);
 	u32 rxd1 = le32_to_cpu(rxd[1]);
@@ -659,10 +658,10 @@ mt7915_mac_fill_rx(struct mt7915_dev *dev, struct sk_buff *skb)
 	u32 csum_mask = MT_RXD0_NORMAL_IP_SUM | MT_RXD0_NORMAL_UDP_TCP_SUM;
 	bool unicast, insert_ccmp_hdr = false;
 	u8 remove_pad, amsdu_info;
+	u8 mode = 0, qos_ctl = 0;
 	bool hdr_trans;
 	u16 hdr_gap;
 	u16 seq_ctrl = 0;
-	u8 qos_ctl = 0;
 	__le16 fc = 0;
 	int idx;
 	struct mt76_sta_stats *stats = NULL;
@@ -864,7 +863,8 @@ mt7915_mac_fill_rx(struct mt7915_dev *dev, struct sk_buff *skb)
 		}
 
 		if (!is_mt7915(&dev->mt76) || (rxd1 & MT_RXD1_NORMAL_GROUP_5)) {
-			ret = mt7915_mac_fill_rx_rate(dev, status, sband, rxv, &nss, mib, stats);
+			ret = mt7915_mac_fill_rx_rate(dev, status, sband, rxv,
+						      &nss, mib, stats, &mode);
 			if (ret < 0)
 				return ret;
 		} else {
