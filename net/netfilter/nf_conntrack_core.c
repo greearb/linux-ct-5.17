@@ -2543,6 +2543,7 @@ void nf_conntrack_cleanup_net_list(struct list_head *net_exit_list)
 {
 	int busy;
 	struct net *net;
+	unsigned long loops = 0;
 
 	/*
 	 * This makes sure all current packets have passed through
@@ -2556,12 +2557,30 @@ i_see_dead_people:
 		struct nf_conntrack_net *cnet = nf_ct_pernet(net);
 
 		nf_ct_iterate_cleanup(kill_all, net, 0, 0);
-		if (atomic_read(&cnet->count) != 0)
+		if (atomic_read(&cnet->count) != 0) {
+			if (loops > 50010)
+				pr_err("nf-conntrack-cleanup-net-list, loops: %ld  cnet-count: %d, expect-count: %d users4: %d users6: %d  users_bridge: %d\n",
+				       loops, atomic_read(&cnet->count), cnet->expect_count,
+				       cnet->users4, cnet->users6, cnet->users_bridge);
 			busy = 1;
+		}
 	}
 	if (busy) {
+		loops++;
+		if (loops > 50000) {
+			msleep(500);
+		}
 		schedule();
-		goto i_see_dead_people;
+		if (loops > 50020) {
+			/* This thing is wedged, going to require a reboot to recover, so attempt
+			 * to just ignore the bad count and see if system works OK.
+			 */
+			WARN_ON_ONCE(1);
+			pr_err("ERROR:  nf_conntrack_cleanup_net cannot make progress.  Maybe skb leak?  Ignoring reference count and will continue.\n");
+		}
+		else {
+			goto i_see_dead_people;
+		}
 	}
 
 	list_for_each_entry(net, net_exit_list, exit_list) {
