@@ -973,8 +973,8 @@ mt7915_mcu_sta_he_tlv(struct sk_buff *skb, struct ieee80211_sta *sta,
 }
 
 static void
-mt7915_mcu_sta_muru_tlv(struct sk_buff *skb, struct ieee80211_sta *sta,
-			struct ieee80211_vif *vif)
+mt7915_mcu_sta_muru_tlv(struct mt7915_dev *dev, struct sk_buff *skb,
+			struct ieee80211_sta *sta, struct ieee80211_vif *vif)
 {
 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
 	struct ieee80211_he_cap_elem *elem = &sta->he_cap.he_cap_elem;
@@ -999,7 +999,8 @@ mt7915_mcu_sta_muru_tlv(struct sk_buff *skb, struct ieee80211_sta *sta,
 	 * the user has specifically disabled ofdma.
 	 */
 	if (!vif->bss_conf.he_ofdma_disable) {
-		muru->cfg.mimo_ul_en = true;
+		if (!is_mt7915(&dev->mt76)) /* 7915 has bugs with mimo ul enable */
+			muru->cfg.mimo_ul_en = true;
 		muru->cfg.ofdma_dl_en = true;
 	}
 
@@ -1825,7 +1826,7 @@ int mt7915_mcu_add_sta(struct mt7915_dev *dev, struct ieee80211_vif *vif,
 		/* starec he */
 		mt7915_mcu_sta_he_tlv(skb, sta, vif);
 		/* starec muru */
-		mt7915_mcu_sta_muru_tlv(skb, sta, vif);
+		mt7915_mcu_sta_muru_tlv(dev, skb, sta, vif);
 		/* starec bfee */
 		mt7915_mcu_sta_bfee_tlv(dev, skb, vif, sta);
 	}
