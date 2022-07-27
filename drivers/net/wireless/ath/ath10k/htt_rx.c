@@ -1229,7 +1229,7 @@ static void ath10k_htt_rx_h_signal(struct ath10k *ar,
 			}
 			sums[i] =
 #endif
-			status->chain_signal[i] = nf + adjust[status->nss] +
+			status->chain_signal[i] = nf + adjust[status->nss]
 				+ (sum_ext ? ath10k_sum_sigs(rxd->ppdu_start.rssi_chains[i].pri20_mhz,
 							     rxd->ppdu_start.rssi_chains[i].ext20_mhz,
 							     rxd->ppdu_start.rssi_chains[i].ext40_mhz,
